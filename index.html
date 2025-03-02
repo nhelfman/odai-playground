@@ -84,6 +84,23 @@
             border: 1px solid #ccc;
             border-radius: 5px;
         }
+
+        #outputMeasures {
+            font-family: Arial, sans-serif;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #outputMeasures div {
+            display: flex;
+            align-items: center;
+        }
+        #outputMeasures strong {
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
@@ -95,6 +112,19 @@
         <button id="runButton" onclick="runPrompt()">▶ Run</button>
         <button id="stopButton" type="button" onclick="abortResponse()" disabled>■ Stop</button>
         <h3 style="margin-top: 20px;">Output:</h3>
+        <div id="outputMeasures">
+            <div>
+                <strong>Chunks:</strong>
+                <span id="chunksCount">xx</span>
+            </div>
+            <div>
+                <strong>Rate:</strong>
+                <span id="chunksRate">xx</span>
+            </div>
+            <div>
+                <strong>Chunks/sec</strong>
+            </div>
+        </div>
         <pre id="output"></pre>
     </div>
     <div id="options-pane">
@@ -138,6 +168,16 @@
             prompt.focus();
         }
 
+        function updateMeasures(count, rate) {
+            if(count % Math.floor(Math.random()*10) === 0) {
+                // skip update most of the times
+                return;
+            }
+
+            document.getElementById("chunksCount").innerText = count;
+            document.getElementById("chunksRate").innerText = rate.toFixed(1);
+        }
+
         async function runPrompt() {
             const promptArea = document.getElementById("prompt");
             const prompt = document.getElementById("prompt").value;
@@ -164,14 +204,26 @@
             };
 
             console.log("creating session", options);
-            
+            const startTime = performance.now();
+
             session?.destroy();
             session = await ai.languageModel.create(options);
  
+            const modelCreatedTime = performance.now();
+
+            console.log(`Session creation time: ${modelCreatedTime - startTime}`)
             console.log("prompting");
             const stream = await session.promptStreaming(prompt, { signal: abortController.signal });
+
+            const streamStartTime = performance.now();
+
+            let count = 0;
             for await (const chunk of stream) {
                 outputElement.textContent += chunk;
+                count++;
+
+                const rate =  count / ((performance.now() - streamStartTime) / 1000);
+                updateMeasures(count,  rate);
             }
 
             session.destroy();
