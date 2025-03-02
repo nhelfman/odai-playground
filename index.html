@@ -151,7 +151,7 @@
     </a>
     <div id="main-content">
         <h2>On-Device AI LLM Playground</h2>
-        <label>User Prompt:</label>
+        <label for="prompt">User Prompt:</label>
         <textarea id="prompt" placeholder="Enter your prompt here..." autocomplete="off"></textarea>
         <h5>(Ctrl+Enter to run, Esc to stop)</h5>
         <button id="runButton" onclick="runPrompt()">▶ Run</button>
@@ -188,16 +188,16 @@
     </div>
     <div id="options-pane">
         <h3>Options</h3>
-        <label>System Prompt:</label>
+        <label for="systemPrompt">System Prompt:</label>
         <textarea id="systemPrompt" placeholder="Enter system prompt..."></textarea>
         
-        <label>Top-K:</label>
+        <label for="topKSlider">Top-K:</label>
         <div class="slider-container">
             <input type="range" id="topKSlider" min="1" max="100" value="40" oninput="topK.value = topKSlider.value">
             <input type="number" id="topK" min="1" max="100" value="40" oninput="topKSlider.value = topK.value">
         </div>
         
-        <label>Temperature:</label>
+        <label for="temperatureSlider">Temperature:</label>
         <div class="slider-container">
             <input type="range" id="temperatureSlider" step="0.1" min="0.1" max="2.0" value="0.7" oninput="temperature.value = temperatureSlider.value">
             <input type="number" id="temperature" step="0.1" min="0.1" max="2.0" value="0.7" oninput="temperatureSlider.value = temperature.value">
