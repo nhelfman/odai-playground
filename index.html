@@ -115,11 +115,11 @@
         <div id="outputMeasures">
             <div>
                 <strong>Chunks:</strong>
-                <span id="chunksCount">xx</span>
+                <span id="chunksCount">--</span>
             </div>
             <div>
                 <strong>Rate:</strong>
-                <span id="chunksRate">xx</span>
+                <span id="chunksRate">--</span>
             </div>
             <div>
                 <strong>Chunks/sec</strong>
@@ -169,6 +169,13 @@
         }
 
         function updateMeasures(count, rate) {
+            if(!count) {
+                // clear
+                document.getElementById("chunksCount").innerText = '--';
+                document.getElementById("chunksRate").innerText = '--';
+                return;
+            }
+
             if(count % Math.floor(Math.random()*10) === 0) {
                 // skip update most of the times
                 return;
@@ -194,6 +201,7 @@
             promptArea.setAttribute("disabled", "")
 
             outputElement.textContent = "";
+            updateMeasures();
             
             abortController = new AbortController();
             
