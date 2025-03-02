@@ -107,6 +107,42 @@
             top: 10px;
             right: 10px;
         }
+
+         /* Dark mode styles */
+         @media (prefers-color-scheme: dark) {
+            body {
+                background: #121212;
+                color: #e0e0e0;
+            }
+            #options-pane {
+                background: #1e1e1e;
+                border-left: 1px solid #444;
+                box-shadow: -2px 0 5px rgba(255, 255, 255, 0.1);
+            }
+            h2, h3 {
+                color: #e0e0e0;
+            }
+            textarea, input[type="number"] {
+                background: #333;
+                color: #e0e0e0;
+                border: 1px solid #555;
+            }
+            pre {
+                background: #222;
+                color: #e0e0e0;
+            }
+            #outputMeasures {
+                background: #333;
+                border: 1px solid #555;
+                color: #e0e0e0;
+            }
+            button {
+                background: #0056b3;
+            }
+            button:hover:not(:disabled) {
+                background: #003f80;
+            }
+        }
     </style>
 </head>
 <body>
