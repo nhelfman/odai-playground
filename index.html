@@ -21,7 +21,8 @@
         <h2>On-Device AI LLM Playground</h2>
         <label>User Prompt:</label>
         <textarea id="prompt" placeholder="Enter your prompt here..."></textarea>
-        <button onclick="runPrompt()">Run</button>
+        <button id="runButton" onclick="runPrompt()">Run</button>
+        <button id="stopButton" type="button" onclick="abortResponse()" disabled>Stop</button>
         <h3>Output:</h3>
         <pre id="output"></pre>
     </div>
@@ -44,22 +45,50 @@
     </div>
 
     <script>
+        let abortController = undefined;
+        let session = undefined;
+
+        function abortResponse() {
+            abortController?.abort("stop_abort_stream");
+
+            session?.destroy();
+
+            const runButton = document.getElementById("runButton");
+            const stopButton = document.getElementById("stopButton");
+            
+            stopButton.setAttribute("disabled", "")
+            runButton.removeAttribute("disabled");
+        }
+
         async function runPrompt() {
             const prompt = document.getElementById("prompt").value;
             const systemPrompt = document.getElementById("systemPrompt").value;
             const topK = parseInt(document.getElementById("topK").value, 10);
             const temperature = parseFloat(document.getElementById("temperature").value);
             const outputElement = document.getElementById("output");
+            
+            const runButton = document.getElementById("runButton");
+            const stopButton = document.getElementById("stopButton");
+            
+            runButton.setAttribute("disabled", "")
+            stopButton.removeAttribute("disabled");
+
             outputElement.textContent = "";
             
+            abortController = new AbortController();
+            
             console.log("creating session");
-            const session = await ai.languageModel.create();
+            
+            session?.destroy();
+            session = await ai.languageModel.create();
  
             console.log("prompting");
-            const stream = await session.promptStreaming(prompt);
+            const stream = await session.promptStreaming(prompt, { signal: abortController.signal });
             for await (const chunk of stream) {
                 outputElement.textContent += chunk;
             }
+
+            session.destroy();
         }
     </script>
 </body>
