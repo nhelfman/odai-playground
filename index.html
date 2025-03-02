@@ -175,7 +175,10 @@
         document.addEventListener("DOMContentLoaded", () => {
             if(!("ai" in window)) {
                 console.warn("on-device AI is not enabled. Please refer to documentation to enable it.");
+                return;
             }
+
+            restoreState();
         });
 
         function abortResponse() {
@@ -216,6 +219,29 @@
             document.getElementById("chunksRate").innerText = rate.toFixed(1);
         }
 
+        function saveState(prompt, options) {
+            localStorage.setItem("previousState", JSON.stringify({ prompt, options }));
+        }
+
+        function restoreState() {
+            const previousState = localStorage.getItem("previousState");
+            if(!previousState) {
+                // no previous state
+                return;
+            }
+
+            const previous = JSON.parse(previousState);
+
+            console.log(previous);
+
+            document.getElementById("prompt").textContent = previous.prompt;
+            document.getElementById("systemPrompt").textContent = previous.options.systemPrompt;
+            document.getElementById("temperature").value = previous.options.temperature;
+            document.getElementById("topK").value = previous.options.topK;
+            document.getElementById("temperatureSlider").value = previous.options.temperature;
+            document.getElementById("topKSlider").value = previous.options.topK;
+        }
+
         async function runPrompt() {
             const promptArea = document.getElementById("prompt");
             const prompt = document.getElementById("prompt").value;
@@ -242,6 +268,8 @@
                 topK: topKValue
             };
 
+            saveState(prompt, options);
+
             console.log("creating session", options);
             const startTime = performance.now();
 
@@ -265,7 +293,6 @@
                     timeToFirstChunk = performance.now() - streamStartTime;
                     document.getElementById("firstChunkLatency").innerText = Math.round(timeToFirstChunk);
                 }
-                console.log("Time to first chunk", timeToFirstChunk);
 
                 outputElement.textContent += chunk;
                 count++;
