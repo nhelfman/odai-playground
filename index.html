@@ -90,7 +90,7 @@
     <div id="main-content">
         <h2>On-Device AI LLM Playground</h2>
         <label>User Prompt:</label>
-        <textarea id="prompt" placeholder="Enter your prompt here..."></textarea>
+        <textarea id="prompt" placeholder="Enter your prompt here..." autocomplete="off"></textarea>
         <button id="runButton" onclick="runPrompt()">▶ Run</button>
         <button id="stopButton" type="button" onclick="abortResponse()" disabled>■ Stop</button>
         <h3 style="margin-top: 20px;">Output:</h3>
@@ -123,16 +123,23 @@
 
             session?.destroy();
 
+            enablePrompt();
+        }
+
+        function enablePrompt() {
             const runButton = document.getElementById("runButton");
             const stopButton = document.getElementById("stopButton");
+            const prompt = document.getElementById("prompt");
             
             stopButton.setAttribute("disabled", "")
             runButton.removeAttribute("disabled");
+            prompt.removeAttribute("disabled");
         }
 
         async function runPrompt() {
+            const promptArea = document.getElementById("prompt");
             const prompt = document.getElementById("prompt").value;
-            const systemPrompt = document.getElementById("systemPrompt").value;
+            const systemPromptValue = document.getElementById("systemPrompt").value;
             const topK = parseInt(document.getElementById("topK").value, 10);
             const temperature = parseFloat(document.getElementById("temperature").value);
             const outputElement = document.getElementById("output");
@@ -142,6 +149,7 @@
             
             runButton.setAttribute("disabled", "")
             stopButton.removeAttribute("disabled");
+            promptArea.setAttribute("disabled", "")
 
             outputElement.textContent = "";
             
@@ -150,7 +158,9 @@
             console.log("creating session");
             
             session?.destroy();
-            session = await ai.languageModel.create();
+            session = await ai.languageModel.create({
+                systemPrompt: systemPromptValue
+            });
  
             console.log("prompting");
             const stream = await session.promptStreaming(prompt, { signal: abortController.signal });
@@ -159,7 +169,14 @@
             }
 
             session.destroy();
+            enablePrompt();
         }
+
+        document.getElementById("prompt").addEventListener("keydown", e => {
+            if (event.ctrlKey && event.key === 'Enter') {
+                runPrompt();
+            }
+        });
     </script>
 </body>
 </html>
