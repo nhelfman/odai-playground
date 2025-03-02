@@ -114,6 +114,13 @@
         <h3 style="margin-top: 20px;">Output:</h3>
         <div id="outputMeasures">
             <div>
+                <strong>Init Latency:</strong>
+                <span id="initLatency">--</span>
+            </div>
+            <div>
+                <strong>ms</strong>
+            </div>
+            <div>
                 <strong>Chunks:</strong>
                 <span id="chunksCount">--</span>
             </div>
@@ -173,6 +180,7 @@
                 // clear
                 document.getElementById("chunksCount").innerText = '--';
                 document.getElementById("chunksRate").innerText = '--';
+                document.getElementById("initLatency").innerText = "--";
                 return;
             }
 
@@ -195,7 +203,7 @@
             
             const runButton = document.getElementById("runButton");
             const stopButton = document.getElementById("stopButton");
-            
+           
             runButton.setAttribute("disabled", "")
             stopButton.removeAttribute("disabled");
             promptArea.setAttribute("disabled", "")
@@ -219,14 +227,18 @@
  
             const modelCreatedTime = performance.now();
 
-            console.log(`Session creation time: ${modelCreatedTime - startTime}`)
-            console.log("prompting");
+            const latency = Math.round(modelCreatedTime - startTime);
+            document.getElementById("initLatency").innerText = latency;
+
             const stream = await session.promptStreaming(prompt, { signal: abortController.signal });
 
             const streamStartTime = performance.now();
 
             let count = 0;
             for await (const chunk of stream) {
+                const timeToFirstChunk = performance.now() - streamStartTime;
+                console.log("Time to first chunk", timeToFirstChunk);
+
                 outputElement.textContent += chunk;
                 count++;
 
