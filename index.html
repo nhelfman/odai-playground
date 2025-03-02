@@ -140,8 +140,8 @@
             const promptArea = document.getElementById("prompt");
             const prompt = document.getElementById("prompt").value;
             const systemPromptValue = document.getElementById("systemPrompt").value;
-            const topK = parseInt(document.getElementById("topK").value, 10);
-            const temperature = parseFloat(document.getElementById("temperature").value);
+            const topKValue = parseInt(document.getElementById("topK").value, 10);
+            const temperatureValue = parseFloat(document.getElementById("temperature").value);
             const outputElement = document.getElementById("output");
             
             const runButton = document.getElementById("runButton");
@@ -155,12 +155,16 @@
             
             abortController = new AbortController();
             
-            console.log("creating session");
+            const options = {
+                systemPrompt: systemPromptValue,
+                temperature: temperatureValue,
+                topK: topKValue
+            };
+
+            console.log("creating session", options);
             
             session?.destroy();
-            session = await ai.languageModel.create({
-                systemPrompt: systemPromptValue
-            });
+            session = await ai.languageModel.create(options);
  
             console.log("prompting");
             const stream = await session.promptStreaming(prompt, { signal: abortController.signal });
