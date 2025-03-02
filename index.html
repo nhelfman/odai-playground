@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On-Device AI LLM Playground</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; }
+        #options-pane { width: 300px; padding: 20px; background: #f4f4f4; border-left: 1px solid #ccc; }
+        #main-content { flex: 1; padding: 20px; }
+        textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+        input[type="number"] { width: 60px; text-align: center; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+        .slider-container { display: flex; align-items: center; gap: 10px; }
+        .slider-container input[type="range"] { flex: 1; }
+    </style>
+</head>
+<body>
+    <div id="main-content">
+        <h2>On-Device AI LLM Playground</h2>
+        <label>User Prompt:</label>
+        <textarea id="prompt" placeholder="Enter your prompt here..."></textarea>
+        <button onclick="runPrompt()">Run</button>
+        <h3>Output:</h3>
+        <pre id="output"></pre>
+    </div>
+    <div id="options-pane">
+        <h3>Options</h3>
+        <label>System Prompt:</label>
+        <textarea id="systemPrompt" placeholder="Enter system prompt..."></textarea>
+        
+        <label>Top-K:</label>
+        <div class="slider-container">
+            <input type="range" id="topKSlider" min="1" max="100" value="40" oninput="topK.value = topKSlider.value">
+            <input type="number" id="topK" min="1" max="100" value="40" oninput="topKSlider.value = topK.value">
+        </div>
+        
+        <label>Temperature:</label>
+        <div class="slider-container">
+            <input type="range" id="temperatureSlider" step="0.1" min="0.1" max="2.0" value="0.7" oninput="temperature.value = temperatureSlider.value">
+            <input type="number" id="temperature" step="0.1" min="0.1" max="2.0" value="0.7" oninput="temperatureSlider.value = temperature.value">
+        </div>
+    </div>
+
+    <script>
+        const session = {
+            async promptStreaming(prompt, systemPrompt, topK, temperature) {
+                // Replace this with your actual API call
+                async function* fakeStream() {
+                    const chunks = ["Hello", " there", ", how", " are", " you?"];
+                    for (const chunk of chunks) {
+                        await new Promise(res => setTimeout(res, 500)); // Simulate delay
+                        yield chunk;
+                    }
+                }
+                return fakeStream();
+            }
+        };
+
+        async function runPrompt() {
+            const prompt = document.getElementById("prompt").value;
+            const systemPrompt = document.getElementById("systemPrompt").value;
+            const topK = parseInt(document.getElementById("topK").value, 10);
+            const temperature = parseFloat(document.getElementById("temperature").value);
+            const outputElement = document.getElementById("output");
+            outputElement.textContent = "";
+            
+            const stream = await session.promptStreaming(prompt, systemPrompt, topK, temperature);
+            for await (const chunk of stream) {
+                outputElement.textContent += chunk;
+            }
+        }
+    </script>
+</body>
+</html>
