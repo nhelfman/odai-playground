@@ -163,6 +163,12 @@
         let abortController = undefined;
         let session = undefined;
 
+        document.addEventListener("DOMContentLoaded", () => {
+            if(!("ai" in window)) {
+                console.warn("on-device AI is not enabled. Please refer to documentation to enable it.");
+            }
+        });
+
         function abortResponse() {
             abortController?.abort("stop_abort_stream");
 
