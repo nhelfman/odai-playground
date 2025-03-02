@@ -108,6 +108,16 @@
             right: 10px;
         }
 
+        #error {
+            display: none;
+            border: 1px solid; #f5c6cb; 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin: 10px 0;
+        }
+
          /* Dark mode styles */
          @media (prefers-color-scheme: dark) {
             body {
@@ -142,6 +152,13 @@
             button:hover:not(:disabled) {
                 background: #003f80;
             }
+
+            #error {
+                border-color: #f5c6cb;
+                background-color: #2e2e2e;
+                color: #ff6b6b;
+            }
+            
         }
     </style>
 </head>
@@ -154,7 +171,7 @@
         <label for="prompt">User Prompt:</label>
         <textarea id="prompt" placeholder="Enter your prompt here..." autocomplete="off"></textarea>
         <h5>(Ctrl+Enter to run, Esc to stop)</h5>
-        <button id="runButton" onclick="runPrompt()">▶ Run</button>
+        <button id="runButton">▶ Run</button>
         <button id="stopButton" type="button" onclick="abortResponse()" disabled>■ Stop</button>
         <h3 style="margin-top: 20px;">Output:</h3>
         <div id="outputMeasures">
@@ -184,6 +201,7 @@
                 <strong>Chunks/sec</strong>
             </div>
         </div>
+        <div id="error">Error message</div>
         <pre id="output"></pre>
     </div>
     <div id="options-pane">
@@ -222,6 +240,7 @@
         const temperatureSlider = document.getElementById("temperatureSlider");
         const topK = document.getElementById("topK");
         const topKSlider = document.getElementById("topKSlider");
+        const error = document.getElementById("error");
 
         document.addEventListener("DOMContentLoaded", () => {
             if(!("ai" in window)) {
@@ -230,10 +249,27 @@
             }
 
             restoreState();
+            prompt.focus();
         });
 
+        runButton.addEventListener("click", async () => {
+           await tryRunPrompt();
+        });
+
+        async function tryRunPrompt() {
+            try {
+                await runPrompt();
+            } catch (e) {
+                abortResponse();
+                
+                console.warn("Error occured during runPrompt(): ", e);
+                error.innerText = e;
+                error.style.display = "block";
+            }
+        }
+
         function abortResponse() {
-            abortController?.abort("stop_abort_stream");
+            abortController?.abort("Stream processing aborted");
 
             session?.destroy();
 
@@ -293,6 +329,7 @@
             runButton.setAttribute("disabled", "")
             stopButton.removeAttribute("disabled");
             prompt.setAttribute("disabled", "")
+            error.style.display = "none";
 
             output.textContent = "";
             updateMeasures();
@@ -345,9 +382,9 @@
             enablePrompt();
         }
 
-        prompt.addEventListener("keydown", e => {
+        prompt.addEventListener("keydown", async e => {
             if (event.ctrlKey && event.key === 'Enter') {
-                runPrompt();
+                await tryRunPrompt();
             }
         });
 
