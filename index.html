@@ -223,179 +223,169 @@
     </div>
 
     <script>
-        let abortController = undefined;
-        let session = undefined;
+    // Global state
+    let abortController, session;
 
-        // DOM refs
-        const chunksCount = document.getElementById("chunksCount");
-        const chunksRate = document.getElementById("chunksRate");
-        const firstChunkLatency = document.getElementById("firstChunkLatency");
-        const initLatency = document.getElementById("initLatency");
-        const output = document.getElementById("output");
-        const prompt = document.getElementById("prompt");
-        const runButton = document.getElementById("runButton");
-        const stopButton = document.getElementById("stopButton");
-        const systemPrompt = document.getElementById("systemPrompt");
-        const temperature = document.getElementById("temperature");
-        const temperatureSlider = document.getElementById("temperatureSlider");
-        const topK = document.getElementById("topK");
-        const topKSlider = document.getElementById("topKSlider");
-        const error = document.getElementById("error");
+    // Cache DOM elements
+    const dom = {
+      chunksCount: document.getElementById("chunksCount"),
+      chunksRate: document.getElementById("chunksRate"),
+      firstChunkLatency: document.getElementById("firstChunkLatency"),
+      initLatency: document.getElementById("initLatency"),
+      output: document.getElementById("output"),
+      prompt: document.getElementById("prompt"),
+      runButton: document.getElementById("runButton"),
+      stopButton: document.getElementById("stopButton"),
+      systemPrompt: document.getElementById("systemPrompt"),
+      temperature: document.getElementById("temperature"),
+      temperatureSlider: document.getElementById("temperatureSlider"),
+      topK: document.getElementById("topK"),
+      topKSlider: document.getElementById("topKSlider"),
+      error: document.getElementById("error")
+    };
 
-        document.addEventListener("DOMContentLoaded", () => {
-            if(!("ai" in window)) {
-                console.warn("on-device AI is not enabled. Please refer to documentation to enable it.");
-                return;
-            }
+    // Save and restore state from localStorage
+    const saveState = (promptValue, options) =>
+      localStorage.setItem("previousState", JSON.stringify({ prompt: promptValue, options }));
 
-            restoreState();
-            prompt.focus();
-        });
+    function restoreState() {
+      const previousState = localStorage.getItem("previousState");
+      if (!previousState) return;
+      const { prompt: savedPrompt, options } = JSON.parse(previousState);
+      dom.prompt.textContent = savedPrompt;
+      dom.systemPrompt.textContent = options.systemPrompt;
+      dom.temperature.value = options.temperature;
+      dom.topK.value = options.topK;
+      dom.temperatureSlider.value = options.temperature;
+      dom.topKSlider.value = options.topK;
+    }
 
-        runButton.addEventListener("click", async () => {
-           await tryRunPrompt();
-        });
+    // Enable UI controls after prompt processing
+    function enablePrompt() {
+      dom.stopButton.setAttribute("disabled", "");
+      dom.runButton.removeAttribute("disabled");
+      dom.prompt.removeAttribute("disabled");
+      dom.prompt.focus();
+    }
 
-        async function tryRunPrompt() {
-            try {
-                await runPrompt();
-            } catch (e) {
-                abortResponse();
-                
-                console.warn("Error occured during runPrompt(): ", e);
-                error.innerText = e;
-                error.style.display = "block";
-            }
+    // Abort streaming and clean up session
+    function abortResponse() {
+      abortController?.abort("Stream processing aborted");
+      session?.destroy();
+      enablePrompt();
+    }
+
+    // Update measurement displays
+    function updateMeasures(count, rate) {
+      if (!count) {
+        [dom.initLatency, dom.firstChunkLatency, dom.chunksCount, dom.chunksRate].forEach(
+          (el) => (el.innerText = "--")
+        );
+        return;
+      }
+      // Skip most updates
+      if (count % Math.floor(Math.random() * 10) === 0) return;
+
+      dom.chunksCount.innerText = count;
+      dom.chunksRate.innerText = rate.toFixed(1);
+    }
+
+    // Main function that runs the prompt and handles streaming
+    async function runPrompt() {
+      const promptValue = dom.prompt.value;
+      const systemPromptValue = dom.systemPrompt.value;
+      const topKValue = parseInt(dom.topK.value, 10);
+      const temperatureValue = parseFloat(dom.temperature.value);
+
+      // Update UI state: disable controls and clear output
+      dom.runButton.setAttribute("disabled", "");
+      dom.stopButton.removeAttribute("disabled");
+      dom.prompt.setAttribute("disabled", "");
+      dom.error.style.display = "none";
+      dom.output.textContent = "";
+      updateMeasures();
+
+      abortController = new AbortController();
+      const options = {
+        systemPrompt: systemPromptValue,
+        temperature: temperatureValue,
+        topK: topKValue
+      };
+
+      saveState(promptValue, options);
+      session?.destroy();
+
+      const startTime = performance.now();
+      session = await ai.languageModel.create(options);
+      session.addEventListener("contextoverflow", () =>
+        console.warn("Context overflow!")
+      );
+      const modelCreatedTime = performance.now();
+      dom.initLatency.innerText = Math.round(modelCreatedTime - startTime);
+
+      const stream = await session.promptStreaming(promptValue, {
+        signal: abortController.signal
+      });
+      const streamStartTime = performance.now();
+      let count = 0;
+      let timeToFirstChunk;
+
+      for await (const chunk of stream) {
+        if (!timeToFirstChunk) {
+          timeToFirstChunk = performance.now() - streamStartTime;
+          dom.firstChunkLatency.innerText = Math.round(timeToFirstChunk);
         }
+        dom.output.textContent += chunk;
+        count++;
+        const rate = count / ((performance.now() - streamStartTime) / 1000);
+        updateMeasures(count, rate);
+      }
 
-        function abortResponse() {
-            abortController?.abort("Stream processing aborted");
+      session.destroy();
+      enablePrompt();
+    }
 
-            session?.destroy();
+    // Wrapper to run the prompt and handle errors
+    async function tryRunPrompt() {
+      try {
+        await runPrompt();
+      } catch (e) {
+        abortResponse();
+        console.warn("Error during runPrompt():", e);
+        dom.error.innerText = e;
+        dom.error.style.display = "block";
+      }
+    }
 
-            enablePrompt();
+    // Set up event listeners
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!("ai" in window)) {
+        console.warn(
+          "On-device AI is not enabled. Please refer to documentation to enable it."
+        );
+        return;
+      }
+      restoreState();
+      dom.prompt.focus();
+    });
+
+    dom.runButton.addEventListener("click", tryRunPrompt);
+
+    dom.prompt.addEventListener("keydown", async (e) => {
+      if (e.ctrlKey && e.key === "Enter") {
+        await tryRunPrompt();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" || event.key === "Esc") {
+        console.log("ESC key pressed");
+        if (session) {
+          abortResponse();
         }
+      }
+    });
 
-        function enablePrompt() {
-            stopButton.setAttribute("disabled", "")
-            runButton.removeAttribute("disabled");
-            prompt.removeAttribute("disabled");
-            prompt.focus();
-        }
-
-        function updateMeasures(count, rate) {
-            if(!count) {
-                // clear
-                [initLatency, firstChunkLatency, chunksCount, chunksRate].forEach(e => e.innerText = "--");
-                return;
-            }
-
-            if(count % Math.floor(Math.random()*10) === 0) {
-                // skip update most of the times
-                return;
-            }
-
-            chunksCount.innerText = count;
-            chunksRate.innerText = rate.toFixed(1);
-        }
-
-        function saveState(prompt, options) {
-            localStorage.setItem("previousState", JSON.stringify({ prompt, options }));
-        }
-
-        function restoreState() {
-            const previousState = localStorage.getItem("previousState");
-            if(!previousState) {
-                // no previous state
-                return;
-            }
-
-            const previous = JSON.parse(previousState);
-
-            prompt.textContent = previous.prompt;
-            systemPrompt.textContent = previous.options.systemPrompt;
-            temperature.value = previous.options.temperature;
-            topK.value = previous.options.topK;
-            temperatureSlider.value = previous.options.temperature;
-            topKSlider.value = previous.options.topK;
-        }
-
-        async function runPrompt() {
-            const promptValue = prompt.value;
-            const systemPromptValue = systemPrompt.value;
-            const topKValue = parseInt(topK.value, 10);
-            const temperatureValue = parseFloat(temperature.value);
-            
-            runButton.setAttribute("disabled", "")
-            stopButton.removeAttribute("disabled");
-            prompt.setAttribute("disabled", "")
-            error.style.display = "none";
-
-            output.textContent = "";
-            updateMeasures();
-            
-            abortController = new AbortController();
-            
-            const options = {
-                systemPrompt: systemPromptValue,
-                temperature: temperatureValue,
-                topK: topKValue
-            };
-
-            saveState(promptValue, options);
-
-            session?.destroy();
-
-            const startTime = performance.now();
-            session = await ai.languageModel.create(options);
- 
-            session.addEventListener("contextoverflow", () => {
-                console.warn("Context overflow!");
-            });
-
-            const modelCreatedTime = performance.now();
-
-            const latency = Math.round(modelCreatedTime - startTime);
-            initLatency.innerText = latency;
-
-            const stream = await session.promptStreaming(promptValue, { signal: abortController.signal });
-
-            const streamStartTime = performance.now();
-
-            let count = 0;
-            let timeToFirstChunk = undefined;
-
-            for await (const chunk of stream) {
-                if(!timeToFirstChunk) {
-                    timeToFirstChunk = performance.now() - streamStartTime;
-                    firstChunkLatency.innerText = Math.round(timeToFirstChunk);
-                }
-
-                output.textContent += chunk;
-                count++;
-
-                const rate =  count / ((performance.now() - streamStartTime) / 1000);
-                updateMeasures(count,  rate);
-            }
-
-            session.destroy();
-            enablePrompt();
-        }
-
-        prompt.addEventListener("keydown", async e => {
-            if (event.ctrlKey && event.key === 'Enter') {
-                await tryRunPrompt();
-            }
-        });
-
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape' || event.key === 'Esc') {
-                console.log('ESC key pressed');
-                if (session) {
-                    abortResponse();
-                }
-            }
-        });
     </script>
 </body>
 </html>
