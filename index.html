@@ -30,7 +30,7 @@
             color: #444;
         }
         textarea {
-            width: 100%;
+            width: 98%;
             height: 120px;
             margin-bottom: 15px;
             padding: 10px;
@@ -312,6 +312,10 @@
             const startTime = performance.now();
             session = await ai.languageModel.create(options);
  
+            session.addEventListener("contextoverflow", () => {
+                console.warn("Context overflow!");
+            });
+
             const modelCreatedTime = performance.now();
 
             const latency = Math.round(modelCreatedTime - startTime);
