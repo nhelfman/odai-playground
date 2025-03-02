@@ -121,6 +121,13 @@
                 <strong>ms</strong>
             </div>
             <div>
+                <strong>1st Chunk Latency:</strong>
+                <span id="firstChunkLatency">--</span>
+            </div>
+            <div>
+                <strong>ms</strong>
+            </div>
+            <div>
                 <strong>Chunks:</strong>
                 <span id="chunksCount">--</span>
             </div>
@@ -178,9 +185,10 @@
         function updateMeasures(count, rate) {
             if(!count) {
                 // clear
+                document.getElementById("initLatency").innerText = "--";
+                document.getElementById("firstChunkLatency").innerText = "--";
                 document.getElementById("chunksCount").innerText = '--';
                 document.getElementById("chunksRate").innerText = '--';
-                document.getElementById("initLatency").innerText = "--";
                 return;
             }
 
@@ -235,8 +243,13 @@
             const streamStartTime = performance.now();
 
             let count = 0;
+            let timeToFirstChunk = undefined;
+
             for await (const chunk of stream) {
-                const timeToFirstChunk = performance.now() - streamStartTime;
+                if(!timeToFirstChunk) {
+                    timeToFirstChunk = performance.now() - streamStartTime;
+                    document.getElementById("firstChunkLatency").innerText = Math.round(timeToFirstChunk);
+                }
                 console.log("Time to first chunk", timeToFirstChunk);
 
                 outputElement.textContent += chunk;
