@@ -1,5 +1,5 @@
 # odai-playground
-Playground when using On Devcice AI feature
+Playground when using On Device AI feature
 
 # Access to playground
 https://nhelfman.github.io/odai-playground/
@@ -8,4 +8,4 @@ https://nhelfman.github.io/odai-playground/
 https://github.com/webmachinelearning/prompt-api
 
 # Requirements
-Edge with the feature supprted and relevent flags enabled
+Edge version with the feature supported and relevant flags enabled
