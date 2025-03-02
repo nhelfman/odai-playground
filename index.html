@@ -271,16 +271,15 @@
 
             saveState(promptValue, options);
 
-            console.log("creating session", options);
-            const startTime = performance.now();
-
             session?.destroy();
+
+            const startTime = performance.now();
             session = await ai.languageModel.create(options);
  
             const modelCreatedTime = performance.now();
 
             const latency = Math.round(modelCreatedTime - startTime);
-            document.getElementById("initLatency").innerText = latency;
+            initLatency.innerText = latency;
 
             const stream = await session.promptStreaming(promptValue, { signal: abortController.signal });
 
@@ -306,7 +305,7 @@
             enablePrompt();
         }
 
-        document.getElementById("prompt").addEventListener("keydown", e => {
+        prompt.addEventListener("keydown", e => {
             if (event.ctrlKey && event.key === 'Enter') {
                 runPrompt();
             }
