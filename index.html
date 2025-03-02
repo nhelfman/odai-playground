@@ -172,6 +172,21 @@
         let abortController = undefined;
         let session = undefined;
 
+        // DOM refs
+        const chunksCount = document.getElementById("chunksCount");
+        const chunksRate = document.getElementById("chunksRate");
+        const firstChunkLatency = document.getElementById("firstChunkLatency");
+        const initLatency = document.getElementById("initLatency");
+        const output = document.getElementById("output");
+        const prompt = document.getElementById("prompt");
+        const runButton = document.getElementById("runButton");
+        const stopButton = document.getElementById("stopButton");
+        const systemPrompt = document.getElementById("systemPrompt");
+        const temperature = document.getElementById("temperature");
+        const temperatureSlider = document.getElementById("temperatureSlider");
+        const topK = document.getElementById("topK");
+        const topKSlider = document.getElementById("topKSlider");
+
         document.addEventListener("DOMContentLoaded", () => {
             if(!("ai" in window)) {
                 console.warn("on-device AI is not enabled. Please refer to documentation to enable it.");
@@ -190,10 +205,6 @@
         }
 
         function enablePrompt() {
-            const runButton = document.getElementById("runButton");
-            const stopButton = document.getElementById("stopButton");
-            const prompt = document.getElementById("prompt");
-            
             stopButton.setAttribute("disabled", "")
             runButton.removeAttribute("disabled");
             prompt.removeAttribute("disabled");
@@ -203,10 +214,7 @@
         function updateMeasures(count, rate) {
             if(!count) {
                 // clear
-                document.getElementById("initLatency").innerText = "--";
-                document.getElementById("firstChunkLatency").innerText = "--";
-                document.getElementById("chunksCount").innerText = '--';
-                document.getElementById("chunksRate").innerText = '--';
+                [initLatency, firstChunkLatency, chunksCount, chunksRate].forEach(e => e.innerText = "--");
                 return;
             }
 
@@ -215,8 +223,8 @@
                 return;
             }
 
-            document.getElementById("chunksCount").innerText = count;
-            document.getElementById("chunksRate").innerText = rate.toFixed(1);
+            chunksCount.innerText = count;
+            chunksRate.innerText = rate.toFixed(1);
         }
 
         function saveState(prompt, options) {
@@ -232,32 +240,25 @@
 
             const previous = JSON.parse(previousState);
 
-            console.log(previous);
-
-            document.getElementById("prompt").textContent = previous.prompt;
-            document.getElementById("systemPrompt").textContent = previous.options.systemPrompt;
-            document.getElementById("temperature").value = previous.options.temperature;
-            document.getElementById("topK").value = previous.options.topK;
-            document.getElementById("temperatureSlider").value = previous.options.temperature;
-            document.getElementById("topKSlider").value = previous.options.topK;
+            prompt.textContent = previous.prompt;
+            systemPrompt.textContent = previous.options.systemPrompt;
+            temperature.value = previous.options.temperature;
+            topK.value = previous.options.topK;
+            temperatureSlider.value = previous.options.temperature;
+            topKSlider.value = previous.options.topK;
         }
 
         async function runPrompt() {
-            const promptArea = document.getElementById("prompt");
-            const prompt = document.getElementById("prompt").value;
-            const systemPromptValue = document.getElementById("systemPrompt").value;
-            const topKValue = parseInt(document.getElementById("topK").value, 10);
-            const temperatureValue = parseFloat(document.getElementById("temperature").value);
-            const outputElement = document.getElementById("output");
+            const promptValue = prompt.value;
+            const systemPromptValue = systemPrompt.value;
+            const topKValue = parseInt(topK.value, 10);
+            const temperatureValue = parseFloat(temperature.value);
             
-            const runButton = document.getElementById("runButton");
-            const stopButton = document.getElementById("stopButton");
-           
             runButton.setAttribute("disabled", "")
             stopButton.removeAttribute("disabled");
-            promptArea.setAttribute("disabled", "")
+            prompt.setAttribute("disabled", "")
 
-            outputElement.textContent = "";
+            output.textContent = "";
             updateMeasures();
             
             abortController = new AbortController();
@@ -268,7 +269,7 @@
                 topK: topKValue
             };
 
-            saveState(prompt, options);
+            saveState(promptValue, options);
 
             console.log("creating session", options);
             const startTime = performance.now();
@@ -281,7 +282,7 @@
             const latency = Math.round(modelCreatedTime - startTime);
             document.getElementById("initLatency").innerText = latency;
 
-            const stream = await session.promptStreaming(prompt, { signal: abortController.signal });
+            const stream = await session.promptStreaming(promptValue, { signal: abortController.signal });
 
             const streamStartTime = performance.now();
 
@@ -291,10 +292,10 @@
             for await (const chunk of stream) {
                 if(!timeToFirstChunk) {
                     timeToFirstChunk = performance.now() - streamStartTime;
-                    document.getElementById("firstChunkLatency").innerText = Math.round(timeToFirstChunk);
+                    firstChunkLatency.innerText = Math.round(timeToFirstChunk);
                 }
 
-                outputElement.textContent += chunk;
+                output.textContent += chunk;
                 count++;
 
                 const rate =  count / ((performance.now() - streamStartTime) / 1000);
