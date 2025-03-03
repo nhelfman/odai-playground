@@ -352,19 +352,52 @@
       } catch (e) {
         abortResponse();
         console.warn("Error during runPrompt():", e);
-        dom.error.innerText = e;
-        dom.error.style.display = "block";
+        showError(e);
+      }
+    }
+
+    function showError(e) {
+      dom.error.innerText = e;
+      dom.error.style.display = "block";
+    }
+
+    async function verifyPrmoptApi() {
+      try {
+        let result = await window.ai.languageModel.capabilities();
+        if (result.available == 'no') {
+          showError("Prompt API is available, feature flag is likely set correctly but no models are available.");
+        }
+        if (result.available == 'after-download') {
+          // call the API to trigger download.
+          showBusy(true);
+          window.ai.languageModel.create({
+            monitor(m) {
+              m.addEventListener("downloadprogress", e => {
+                showError(`Downloading model ${Math.round(e.loaded/1000000)} of ${Math.round(e.total/1000000)} MB.`);
+              });
+            }
+          });
+        }
+        if (result.available != 'readily') {
+          showError("Cannot create model now - " + result.available);
+        }
+      }
+      catch (e) {
+        if (e.name === "TypeError") {
+          showError("Prompt API is not detected. Check feature flags are enabled");
+        }
       }
     }
 
     // Set up event listeners
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
       if (!("ai" in window)) {
-        console.warn(
-          "On-device AI is not enabled. Please refer to documentation to enable it."
-        );
+        showError("On-device AI is not enabled. Please refer to documentation to enable it.");
         return;
       }
+
+      await verifyPrmoptApi();
+
       restoreState();
       dom.prompt.focus();
     });
