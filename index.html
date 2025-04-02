@@ -363,23 +363,9 @@
 
     async function verifyPrmoptApi() {
       try {
-        let result = await window.ai.languageModel.availability();
+        const result = await window.ai.languageModel.availability();
         if (result !== 'available') {
           showError("Prompt API is available, feature flag is likely set correctly but no models are available.");
-        }
-        if (result === 'after-download') {
-          // call the API to trigger download.
-          showBusy(true);
-          window.ai.languageModel.create({
-            monitor(m) {
-              m.addEventListener("downloadprogress", e => {
-                showError(`Downloading model ${Math.round(e.loaded/1000000)} of ${Math.round(e.total/1000000)} MB.`);
-              });
-            }
-          });
-        }
-        if (result !== 'readily') {
-          showError("Cannot create model now - " + result.available);
         }
       }
       catch (e) {
