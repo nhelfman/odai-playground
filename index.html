@@ -363,11 +363,11 @@
 
     async function verifyPrmoptApi() {
       try {
-        let result = await window.ai.languageModel.capabilities();
-        if (result.available == 'no') {
+        let result = await window.ai.languageModel.availability();
+        if (result !== 'available') {
           showError("Prompt API is available, feature flag is likely set correctly but no models are available.");
         }
-        if (result.available == 'after-download') {
+        if (result === 'after-download') {
           // call the API to trigger download.
           showBusy(true);
           window.ai.languageModel.create({
@@ -378,7 +378,7 @@
             }
           });
         }
-        if (result.available != 'readily') {
+        if (result !== 'readily') {
           showError("Cannot create model now - " + result.available);
         }
       }
